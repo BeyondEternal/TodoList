@@ -1,0 +1,74 @@
+﻿@page "/todo"
+@using System.Collections.Generic
+@using TodoList.Shared.Models;
+@inject HttpClient Http
+
+<h1>Lista de actividades por hacer</h1>
+
+@if (todos == null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <EditForm Model="todo" OnValidSubmit="AddTodo">
+        <div class="form-group">
+            <InputText class="form-control" @bind-Value="todo!.Title" placeholder="Escribe el título de la actividad" />
+            <button class="btn btn-outline-success mb-4 mt-1" type="submit">Agregar</button>
+        </div>
+    </EditForm>
+    if (todos.Count == 0)
+    {
+        <p>No hay actividades pendientes.</p>
+    }
+    else
+    {
+            @foreach (var todo in todos)
+            {
+                <div class="card" style="width: 18rem;">
+                  <div class="card-body">
+                     <h5 class="card-title @((todo.IsDone ? "completado" : ""))">@todo.Title</h5>
+                     <div class="form-group">
+                         <input id="isDone" class="form-check-input mt-0" type="checkbox" checked="@todo.IsDone" @onclick="() => ToggleDone(todo)" />
+                         <label class="form-check-label" for="isDone">Completado</label>
+                     </div>
+                     <button class="btn btn-outline-danger mt-4" @onclick="() => Delete(todo)">Eliminar</button>
+                  </div>
+                </div>
+            }
+    }
+}
+
+@code {
+    private TodoItem todo = new TodoItem();
+    private List<TodoItem>? todos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        todos = await Http.GetFromJsonAsync<List<TodoItem>>("api/TodoItems/");
+    }
+
+    private async Task AddTodo()
+    {
+        todo!.IsDone = false;
+        await Http.PostAsJsonAsync("api/TodoItems/", todo);
+        todos!.Add(todo);
+        todo = new TodoItem();
+        StateHasChanged();
+    }
+
+    private async Task ToggleDone(TodoItem todo)
+    {
+        todo.IsDone = !todo.IsDone;
+        await Http.PutAsJsonAsync($"api/TodoItems/{todo.Id}", todo);
+    }
+
+    private async Task Delete(TodoItem todo)
+    {
+        await Http.DeleteAsync($"api/TodoItems/{todo.Id}");
+        todos!.Remove(todo);
+        StateHasChanged();
+    }
+
+    
+}
